@@ -1,46 +1,47 @@
 export default function HeroCopy() {
   return (
-    <div className="relative z-20 flex w-full flex-col justify-center px-7 py-16 md:w-[45%] md:px-12 lg:px-16">
-      <div className="mb-12 font-mono text-[9px] leading-relaxed tracking-[0.12em] text-white/25">
-        <p>&gt; INITIALIZING PORTFOLIO.EXE</p>
-        <p>&gt; USER: DHANWIL</p>
-        <p>&gt; STATUS: AVAILABLE</p>
-      </div>
-
-      <p className="mb-3 font-mono text-xs tracking-[0.08em] text-white/60">
-        Hello, I&apos;m
+    <div className="relative z-20 flex min-h-[34rem] w-full flex-col justify-center px-5 py-16 sm:px-8 md:min-h-[40rem] lg:min-h-0 lg:px-12 lg:py-20 xl:px-16">
+      <p className="mb-10 flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--muted)] sm:mb-14">
+        <span className="h-px w-7 bg-[var(--accent)]" />
+        Design · Engineer · Solve ·
       </p>
 
-      <h1 className="max-w-[680px] text-[clamp(3.5rem,7vw,8rem)] leading-[0.83] font-medium tracking-[-0.065em]">
+      <h1 className="max-w-5xl text-[clamp(3.7rem,10vw,9rem)] leading-[0.84] font-light uppercase tracking-[-0.06em]">
         Dhanwil
         <br />
-        Alcover<span className="animate-cursor">_</span>
+        Alcover<span className="text-[var(--accent)]">_</span>
       </h1>
 
-      <div className="mt-8 space-y-1 font-mono text-[12px] leading-relaxed text-white/65">
-        <p>Computer Science Student</p>
-        <p>Full-Stack Developer</p>
-        <p>UI/UX Designer</p>
+      <div className="mt-10 flex flex-wrap gap-x-5 gap-y-2 font-mono text-[8px] uppercase tracking-[0.14em] text-[var(--muted)] sm:text-[9px]">
+        <span>Computer Science Student</span>
+        <span aria-hidden="true" className="text-[var(--accent)]">
+          /
+        </span>
+        <span>Full-Stack Developer</span>
+        <span aria-hidden="true" className="text-[var(--accent)]">
+          /
+        </span>
+        <span>UI/UX Designer</span>
       </div>
 
-      <p className="mt-8 max-w-[430px] text-sm leading-6 text-white/45">
-        I build thoughtful digital products where engineering, design, and
-        intelligent systems meet.
+      <p className="mt-8 max-w-md text-sm leading-6 text-[var(--muted)] sm:text-base sm:leading-7">
+        I build digital products and intelligent systems where engineering,
+        design, and human impact meet.
       </p>
 
-      <div className="mt-10 flex items-center gap-7">
+      <div className="mt-10 flex flex-wrap items-center gap-7 sm:mt-12">
         <a
-          href="#projects"
-          className="group border border-white/25 px-5 py-3 font-mono text-[9px] uppercase tracking-[0.14em] transition-all hover:bg-white hover:text-black"
+          href="#about"
+          className="bg-[var(--foreground)] px-5 py-3.5 font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--surface)] transition-transform hover:-translate-y-0.5"
         >
-          &gt; View my work
+          Enter experience →
         </a>
 
         <a
-          href="#contact"
-          className="font-mono text-[9px] uppercase tracking-[0.14em] text-white/50 transition-colors hover:text-white"
+          href="#projects"
+          className="border-b border-[var(--foreground)] pb-1 font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--foreground)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
         >
-          Contact me →
+          View projects
         </a>
       </div>
     </div>

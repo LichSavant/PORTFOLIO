@@ -5,21 +5,24 @@ import SystemHUD from "./SystemHUD";
 
 export default function Landing() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#050505] text-[#f1f1ed]">
-      <div className="technical-grid absolute inset-0" />
+    <main
+      id="home"
+      className="relative min-h-screen overflow-hidden bg-[var(--background)] text-[var(--foreground)]"
+    >
+      <div className="technical-grid pointer-events-none absolute inset-0" />
 
-      <div className="relative z-10 flex min-h-screen flex-col border border-white/10">
+      <div className="relative z-10 flex min-h-screen flex-col">
         <Navigation />
 
-        <section className="relative flex flex-1">
+        <section className="relative grid flex-1 lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.55fr)_minmax(15rem,0.4fr)]">
           <HeroCopy />
           <PortraitField />
           <SystemHUD />
         </section>
 
-        <footer className="flex h-12 items-center justify-between border-t border-white/10 px-6 font-mono text-[9px] uppercase tracking-[0.18em] text-white/35">
-          <span>Portfolio Interface / 2026</span>
-          <span>Cebu, Philippines · System Online</span>
+        <footer className="flex min-h-11 items-center justify-between border-t border-[var(--line)] px-5 font-mono text-[7px] uppercase tracking-[0.18em] text-[var(--muted)] sm:px-8 lg:px-12">
+          <span>Portfolio / 2026</span>
+          <span>Cebu, Philippines · 10.3157° N</span>
         </footer>
       </div>
     </main>
