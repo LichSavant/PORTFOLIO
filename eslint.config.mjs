@@ -10,11 +10,5 @@ export default defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    "page.tsx",
-    "Landing.tsx",
-    "Navigation.tsx",
-    "HeroCopy.tsx",
-    "PortraitField.tsx",
-    "SystemHUD.tsx",
   ]),
 ]);

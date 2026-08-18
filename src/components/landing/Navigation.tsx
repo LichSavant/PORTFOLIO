@@ -1,12 +1,4 @@
-const navigation = [
-  "Home",
-  "About",
-  "Projects",
-  "Skills",
-  "Experience",
-  "Resume",
-  "Contact",
-];
+import { navigationItems } from "@/data/navigation";
 
 export default function Navigation() {
   return (
@@ -16,15 +8,15 @@ export default function Navigation() {
       </div>
 
       <nav className="ml-auto hidden items-center gap-6 md:flex">
-        {navigation.map((item, index) => (
+        {navigationItems.map((item, index) => (
           <a
-            key={item}
-            href={`#${item.toLowerCase()}`}
+            key={item.label}
+            href={item.href}
             className={`font-mono text-[9px] uppercase tracking-[0.12em] transition-colors ${
               index === 0 ? "text-white" : "text-white/40 hover:text-white"
             }`}
           >
-            _{item}
+            _{item.label}
           </a>
         ))}
       </nav>
