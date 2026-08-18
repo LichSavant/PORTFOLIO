@@ -2,48 +2,54 @@ import { navigationItems } from "@/data/navigation";
 
 export default function Navigation() {
   return (
-    <header className="relative z-30 flex min-h-16 items-center border-b border-[var(--line)] px-5 sm:px-8 lg:min-h-24 lg:px-12">
-      <a
-        href="#home"
-        aria-label="Dhanwil Alcover — home"
-        className="font-mono text-sm font-medium tracking-[-0.04em]"
-      >
-        DA<span className="text-[var(--accent)]">.</span>
-      </a>
+    <header className="relative z-40 h-[88px]">
+      <div className="page-frame grid h-full grid-cols-[1fr_auto_1fr] items-center">
+        <a
+          href="#home"
+          aria-label="Dhanwil Alcover — home"
+          className="col-start-1 justify-self-start text-[28px] font-semibold tracking-[-0.08em]"
+        >
+          DA
+        </a>
 
-      <nav
-        aria-label="Primary navigation"
-        className="ml-auto hidden items-start gap-5 md:flex lg:gap-8"
-      >
-        {navigationItems.map((item, index) => (
-          <a
-            key={item.label}
-            href={item.href}
-            className={`group flex min-w-10 flex-col gap-1 font-mono uppercase transition-colors ${
-              index === 0
-                ? "text-[var(--foreground)]"
-                : "text-[var(--muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            <span className="text-[7px] tracking-[0.16em] opacity-60">
-              {item.number}
-            </span>
-            <span className="relative text-[8px] tracking-[0.12em] lg:text-[9px]">
-              {item.label}
+        <nav
+          aria-label="Primary navigation"
+          className="col-start-2 hidden items-start gap-[clamp(1.25rem,2.25vw,2.75rem)] lg:flex"
+        >
+          {navigationItems.map((item, index) => (
+            <a
+              key={item.label}
+              href={item.href}
+              className="group relative flex min-w-12 flex-col gap-1.5 font-mono uppercase"
+            >
+              <span className="text-[9px] tracking-[0.16em] text-[var(--muted)]">
+                {item.number}
+              </span>
+
+              <span
+                className={`text-[11px] tracking-[0.09em] transition-colors ${
+                  index === 0
+                    ? "text-[var(--foreground)]"
+                    : "text-[var(--foreground)] hover:text-[var(--accent)]"
+                }`}
+              >
+                {item.label}
+              </span>
+
               {index === 0 ? (
-                <span className="absolute -bottom-2 left-0 h-px w-4 bg-[var(--accent)]" />
+                <span className="absolute -bottom-3 left-0 h-px w-7 bg-[var(--accent)]" />
               ) : null}
-            </span>
-          </a>
-        ))}
-      </nav>
+            </a>
+          ))}
+        </nav>
 
-      <div className="ml-auto flex items-center gap-2 font-mono text-[8px] uppercase tracking-[0.13em] text-[var(--muted)] md:ml-8 lg:ml-12">
-        <span className="hidden sm:inline">Available</span>
-        <span
-          aria-hidden="true"
-          className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"
-        />
+        <div className="col-start-3 flex items-center gap-3 justify-self-end font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--foreground)]">
+          <span className="hidden sm:inline">SYS.STATUS</span>
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"
+          />
+        </div>
       </div>
     </header>
   );

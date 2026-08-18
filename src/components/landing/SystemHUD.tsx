@@ -1,12 +1,12 @@
 export default function SystemHUD() {
   return (
-    <aside className="border-t border-[var(--line)] px-5 py-9 sm:px-8 lg:border-t-0 lg:border-l lg:px-7 lg:py-12 xl:px-9">
-      <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-1">
+    <aside className="hidden pb-14 md:block lg:absolute lg:top-1/2 lg:right-0 lg:w-[19%] lg:-translate-y-1/2 lg:pb-0">
+      <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-1 lg:gap-16">
         <section>
-          <p className="mb-5 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--muted)]">
+          <p className="mb-5 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--muted)]">
             Current focus
           </p>
-          <ul className="space-y-2 font-mono text-[9px] uppercase tracking-[0.11em]">
+          <ul className="space-y-2.5 font-mono text-[11px] uppercase tracking-[0.1em]">
             <li>
               <span className="text-[var(--accent)]">›</span> Building products
             </li>
@@ -23,10 +23,10 @@ export default function SystemHUD() {
         </section>
 
         <section>
-          <p className="mb-5 font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--muted)]">
+          <p className="mb-5 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--muted)]">
             Mission
           </p>
-          <p className="max-w-48 text-sm leading-6 text-[var(--muted)]">
+          <p className="max-w-[220px] text-[14px] leading-[1.65] text-[var(--muted)]">
             Create solutions that make complex things simple and meaningful.
           </p>
         </section>
