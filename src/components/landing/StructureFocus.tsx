@@ -18,46 +18,69 @@ const ITEMS = [
   },
 ] as const;
 
-const CYCLE_DURATION = 1950;
+const CYCLE_DURATION = 2200;
+const ROW_HEIGHT = 32;
 
 export default function StructureFocus() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
-    if (isHovered) return;
+    if (paused) return;
 
     const interval = window.setInterval(() => {
       setActiveIndex(
-        (current) => (current + 1) % ITEMS.length
+        (current) =>
+          (current + 1) % ITEMS.length
       );
     }, CYCLE_DURATION);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [isHovered]);
+  }, [paused]);
 
   return (
     <aside
       aria-label="DNA structure information"
       className="
-        hero-structure-card
         absolute
         z-[25]
         hidden
+        w-[245px]
         xl:block
       "
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        right: "4.5%",
+        left: "auto",
+        top: "58%",
+      }}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
     >
-      <div className="structure-focus-container relative">
-        {/* MOVING FOCUS FRAME */}
+      <div className="relative">
+        {/* ACTIVE FRAME */}
         <div
           aria-hidden="true"
-          className="structure-focus-frame"
+          className="
+            structure-focus-frame
+            pointer-events-none
+            absolute
+            left-0
+            top-0
+            h-8
+            w-full
+            transition-transform
+            duration-500
+            ease-out
+            will-change-transform
+          "
           style={{
-            transform: `translate3d(0, ${activeIndex * 32}px, 0)`,
+            transform: `translate3d(
+              0,
+              ${activeIndex * ROW_HEIGHT}px,
+              0
+            )`,
           }}
         >
           <span className="structure-corner structure-corner-tl" />
@@ -68,41 +91,45 @@ export default function StructureFocus() {
 
         {/* ROWS */}
         {ITEMS.map((item, index) => {
-          const isActive = index === activeIndex;
+          const isActive =
+            index === activeIndex;
 
           return (
             <button
               key={item.label}
               type="button"
               tabIndex={-1}
+              onMouseEnter={() =>
+                setActiveIndex(index)
+              }
               className={`
-                structure-focus-row
-                relative
-                z-10
-                flex
-                h-8
-                w-full
-                items-center
-                border-0
-                bg-transparent
-                px-5
-                text-left
-                font-mono
-                text-[8px]
-                uppercase
-                tracking-[0.14em]
+  relative
+  z-10
+  flex
+  h-8
+  w-full
+  items-center
+  border-0
+  bg-transparent
+  px-3
+  text-left
+  font-mono
+  text-[9px]
+  uppercase
+  tracking-[0.11em]
+  transition-all
+  duration-300
 
-                ${
-                  isActive
-                    ? "structure-focus-row-active"
-                    : ""
-                }
-              `}
-              onMouseEnter={() => setActiveIndex(index)}
+  ${
+    isActive
+      ? "opacity-100 blur-0"
+      : "opacity-35 blur-[0.7px]"
+  }
+`}
             >
               <span
                 className="
-                  w-[78px]
+                  w-[88px]
                   shrink-0
                   text-[var(--muted)]
                 "
@@ -128,20 +155,20 @@ export default function StructureFocus() {
                 {item.value}
               </span>
 
-              {"status" in item && item.status && (
-                <span
-                  aria-hidden="true"
-                  className="
-                    structure-active-dot
-                    ml-2
-                    h-1
-                    w-1
-                    shrink-0
-                    rounded-full
-                    bg-[var(--accent)]
-                  "
-                />
-              )}
+              {"status" in item &&
+                item.status && (
+                  <span
+                    aria-hidden="true"
+                    className="
+                      ml-2
+                      h-1
+                      w-1
+                      shrink-0
+                      rounded-full
+                      bg-[var(--accent)]
+                    "
+                  />
+                )}
             </button>
           );
         })}

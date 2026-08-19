@@ -1,0 +1,54 @@
+.echo-text {
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
+
+  line-height: inherit;
+  letter-spacing: inherit;
+
+  user-select: none;
+
+  font-kerning: normal;
+  text-rendering: geometricPrecision;
+
+  isolation: isolate;
+}
+
+.echo-text__echo {
+  position: absolute;
+  inset: 0;
+
+  display: block;
+
+  pointer-events: none;
+
+  transform: translate3d(0, 0, 0);
+
+  transform-origin: 50% 50%;
+
+  will-change: transform, opacity;
+
+  backface-visibility: hidden;
+}
+
+.echo-text__echo--front {
+  position: relative;
+
+  z-index: 2;
+
+  opacity: 1;
+
+  filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .echo-text__echo:not(
+      .echo-text__echo--front
+    ) {
+    display: none;
+  }
+
+  .echo-text__echo--front {
+    transform: none !important;
+  }
+}
