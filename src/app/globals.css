@@ -85,13 +85,21 @@ body {
 
 .hero-stage {
   display: grid;
-  grid-template-columns: minmax(0, 43%) minmax(0, 38%) minmax(170px, 19%);
+  grid-template-columns:
+    minmax(0, 43%)
+    minmax(0, 38%)
+    minmax(170px, 19%);
+
   min-height: calc(100svh - 92px);
 }
 
 .hero-copy {
   grid-column: 1;
-  padding: clamp(2rem, 4.5vh, 4.25rem) 0 clamp(5.5rem, 10vh, 8rem);
+
+  padding:
+    clamp(2rem, 4.5vh, 4.25rem)
+    0
+    clamp(5.5rem, 10vh, 8rem);
 }
 
 .hero-title {
@@ -123,20 +131,58 @@ body {
 }
 
 @media (max-width: 1279px) {
-  .portrait-field { inset: -7% 12% -9% 40%; }
-  .hero-stage { grid-template-columns: minmax(0, 45%) minmax(0, 37%) minmax(160px, 18%); }
-  .hero-title { font-size: clamp(4.25rem, 7.2vw, 6.3rem); }
+  .portrait-field {
+    inset: -7% 12% -9% 40%;
+  }
+
+  .hero-stage {
+    grid-template-columns:
+      minmax(0, 45%)
+      minmax(0, 37%)
+      minmax(160px, 18%);
+  }
+
+  .hero-title {
+    font-size: clamp(4.25rem, 7.2vw, 6.3rem);
+  }
 }
 
 @media (max-width: 1023px) {
-  .hero-stage { display: block; }
-  .hero-copy { width: min(66%, 650px); min-height: calc(100svh - 92px); }
-  .hero-title { font-size: clamp(4.4rem, 10vw, 6.8rem); }
-  .system-hud { position: absolute; right: 0; bottom: 5.5rem; width: 29%; padding-left: 1.5rem; }
+  .hero-stage {
+    display: block;
+  }
+
+  .hero-copy {
+    width: min(66%, 650px);
+    min-height: calc(100svh - 92px);
+  }
+
+  .hero-title {
+    font-size: clamp(4.4rem, 10vw, 6.8rem);
+  }
+
+  .system-hud {
+    position: absolute;
+    right: 0;
+    bottom: 5.5rem;
+    width: 29%;
+    padding-left: 1.5rem;
+  }
 }
 
 @media (max-width: 767px) {
-  .hero-copy { width: 100%; min-height: calc(100svh - 92px); padding: 2.5rem 0 7rem; }
-  .hero-title { font-size: clamp(3.25rem, 15vw, 5.3rem); }
-  .hero-graph { width: 100%; opacity: 0.55; }
+  .hero-copy {
+    width: 100%;
+    min-height: calc(100svh - 92px);
+    padding: 2.5rem 0 7rem;
+  }
+
+  .hero-title {
+    font-size: clamp(3.25rem, 15vw, 5.3rem);
+  }
+
+  .hero-graph {
+    width: 100%;
+    opacity: 0.55;
+  }
 }
