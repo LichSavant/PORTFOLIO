@@ -1,6 +1,6 @@
 export default function SystemHUD() {
   return (
-    <aside className="hidden pb-14 md:block lg:absolute lg:top-1/2 lg:right-0 lg:w-[19%] lg:-translate-y-1/2 lg:pb-0">
+    <aside className="system-hud hidden md:block">
       <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-1 lg:gap-16">
         <section>
           <p className="mb-5 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--muted)]">

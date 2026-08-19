@@ -11,15 +11,19 @@
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "latest",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
     "next": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "@types/three": "^0.185.4",
     "eslint": "latest",
     "eslint-config-next": "latest",
     "tailwindcss": "latest",

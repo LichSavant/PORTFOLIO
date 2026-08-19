@@ -14,10 +14,23 @@ export default function Landing() {
       <div className="relative z-10 flex min-h-[100svh] flex-col">
         <Navigation />
 
-        <div className="page-frame relative flex-1">
+        <div className="page-frame hero-stage relative flex-1">
           <HeroCopy />
           <PortraitField />
           <SystemHUD />
+
+          <svg aria-hidden="true" className="hero-graph" viewBox="0 0 760 170" preserveAspectRatio="none">
+            <g fill="none" stroke="currentColor" strokeWidth="0.75">
+              <path d="M0 146 C90 112 150 150 230 121 S360 94 430 126 565 116 620 58 704 72 760 16" />
+              <path opacity=".55" d="M0 153 C95 139 154 109 228 138 S358 128 430 105 560 145 628 88 704 105 760 52" />
+              <path opacity=".3" d="M0 160 C120 126 176 161 258 145 S390 108 470 143 600 126 760 85" />
+            </g>
+            <g fill="currentColor" opacity=".55">
+              {Array.from({ length: 36 }, (_, index) => (
+                <circle key={index} cx={index * 22} cy={145 - Math.sin(index * 0.63) * 22} r="1" />
+              ))}
+            </g>
+          </svg>
         </div>
       </div>
 

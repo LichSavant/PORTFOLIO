@@ -2,7 +2,7 @@ import { navigationItems } from "@/data/navigation";
 
 export default function Navigation() {
   return (
-    <header className="relative z-40 h-[88px]">
+    <header className="relative z-40 h-[92px]">
       <div className="page-frame grid h-full grid-cols-[1fr_auto_1fr] items-center">
         <a
           href="#home"
@@ -14,7 +14,7 @@ export default function Navigation() {
 
         <nav
           aria-label="Primary navigation"
-          className="col-start-2 hidden items-start gap-[clamp(1.25rem,2.25vw,2.75rem)] lg:flex"
+          className="col-start-2 hidden items-start gap-[clamp(1.15rem,2vw,2.6rem)] xl:flex"
         >
           {navigationItems.map((item, index) => (
             <a

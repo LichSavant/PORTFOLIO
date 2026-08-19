@@ -1,6 +1,6 @@
 export default function HeroCopy() {
   return (
-    <section className="relative z-20 flex min-h-[calc(100svh-88px)] min-w-0 w-full flex-col justify-center py-14 pb-24 lg:w-[48%] lg:py-10 lg:pb-20">
+    <section className="hero-copy relative z-20 flex min-w-0 flex-col justify-center">
       <p className="mb-7 font-mono text-[10px] uppercase tracking-[0.28em] text-[var(--foreground)] sm:text-[11px] lg:mb-8">
         <span>Design</span>
         <span className="mx-3 text-[var(--muted)]">.</span>
@@ -9,7 +9,7 @@ export default function HeroCopy() {
         <span className="text-[var(--accent)]">Solve.</span>
       </p>
 
-      <h1 className="max-w-full text-[clamp(2.9rem,14.5vw,7rem)] leading-[0.83] font-light uppercase tracking-[-0.062em] sm:text-[clamp(4.5rem,12vw,8rem)] lg:max-w-[900px] lg:text-[clamp(5rem,7vw,8.5rem)]">
+      <h1 className="hero-title max-w-full font-light uppercase">
         Dhanwil
         <br />
         Alcover<span className="text-[var(--accent)]">_</span>
