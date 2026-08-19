@@ -1,769 +1,762 @@
 "use client";
 
-import {
-  CSSProperties,
-  memo,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useRef } from "react";
 
 /* ============================================================
-   DNA CONFIG
+   CONFIG
 ============================================================ */
 
-const ROWS = 80;
-const WIDTH = 70;
+const FONT =
+  '"IBM Plex Mono", "Cascadia Mono", "SFMono-Regular", Consolas, monospace';
+
+const GLYPHS = [" ", "·", ".", ":", "-", "=", "+", "*", "#", "%", "@"];
+
+const FPS = 30;
+const FRAME_TIME = 1000 / FPS;
+
 const TURNS = 1.27;
 
+const HELIX_RADIUS = 0.205;
+
+const BASE_THICKNESS = 5;
+const FRONT_THICKNESS = 4;
+
 /*
- * Carefully spaced luminance ramp.
- * Less noisy than a traditional ASCII gradient.
+ * Smaller value = slower rotation.
  */
-const SHADE_CHARS = [
-  "·",
-  ".",
-  ":",
-  "-",
-  "=",
-  "+",
-  "*",
-  "#",
-  "%",
-  "@",
-];
+const ROTATION_SPEED = 0.24;
 
-const ASCII_FONT =
-  '"IBM Plex Mono", "JetBrains Mono", "Cascadia Mono", "SFMono-Regular", Consolas, monospace';
+/* ============================================================
+   HELPERS
+============================================================ */
 
-type DNALine = {
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function smoothstep(edge0: number, edge1: number, value: number) {
+  const range = Math.max(edge1 - edge0, 0.0001);
+
+  const t = clamp((value - edge0) / range, 0, 1);
+
+  return t * t * (3 - 2 * t);
+}
+
+function gaussian(value: number, center: number, width: number) {
+  const x = (value - center) / width;
+
+  return Math.exp(-(x * x));
+}
+
+function glyph(brightness: number) {
+  const normalized = clamp(brightness, 0, 1);
+
+  const index = Math.round(
+    normalized * (GLYPHS.length - 1)
+  );
+
+  return GLYPHS[index];
+}
+
+/* ============================================================
+   FRAME TYPES
+============================================================ */
+
+type FrameRow = {
   text: string;
-
-  /*
-   * How close this section is to camera.
-   */
   depth: number;
+};
 
-  /*
-   * Sparse blue highlight.
-   */
-  accent: boolean;
+type StaticRowData = {
+  t: number;
 
-  /*
-   * Additional reflective intensity.
-   */
-  specularity: number;
+  centerBase: number;
+
+  phaseVariation: number;
+
+  radiusMultiplier: number;
+
+  rungStrength: number;
 };
 
 /* ============================================================
-   MATH
+   PRECOMPUTED ROW DATA
 ============================================================ */
 
-function clamp(
-  value: number,
-  min: number,
-  max: number
-) {
-  return Math.max(
-    min,
-    Math.min(max, value)
-  );
-}
+/*
+ * A large amount of the old DNA math depended ONLY on row
+ * position, yet it was recalculated every single animation
+ * frame.
+ *
+ * This calculates those values only when the canvas/grid size
+ * changes.
+ */
 
-function smoothstep(
-  edge0: number,
-  edge1: number,
-  x: number
-) {
-  const t = clamp(
-    (x - edge0) /
-      (edge1 - edge0),
-    0,
-    1
-  );
+function buildStaticRows(
+  rows: number,
+  columns: number
+): StaticRowData[] {
+  const result: StaticRowData[] = [];
 
-  return (
-    t *
-    t *
-    (3 - 2 * t)
-  );
-}
-
-function shadeCharacter(
-  light: number
-) {
-  const value =
-    clamp(light, 0, 1);
-
-  const index =
-    Math.round(
-      value *
-        (
-          SHADE_CHARS.length -
-          1
-        )
-    );
-
-  return SHADE_CHARS[index];
-}
-
-/* ============================================================
-   CENTERLINE / BODY CURVE
-============================================================ */
-
-function getCurveOffset(
-  t: number,
-  time: number
-) {
-  /*
-   * Main sculptural posture.
-   *
-   * Top slightly right.
-   * Midsection bows left.
-   * Bottom returns right.
-   */
-
-  const upperRight =
-    Math.exp(
-      -Math.pow(
-        (t - 0.05) / 0.22,
-        2
-      )
-    ) * 26;
-
-  const centerLeft =
-    -Math.exp(
-      -Math.pow(
-        (t - 0.47) / 0.265,
-        2
-      )
-    ) * 45;
-
-  const lowerRight =
-    Math.exp(
-      -Math.pow(
-        (t - 0.9) / 0.26,
-        2
-      )
-    ) * 25;
-
-  /*
-   * Broad asymmetric shaping.
-   */
-  const structuralWave =
-    Math.sin(
-      t * Math.PI * 1.5 +
-        0.43
-    ) * 5;
-
-  /*
-   * Barely perceptible body motion.
-   */
-  const livingDrift =
-    Math.sin(
-      t * Math.PI * 1.6 +
-        time * 0.42
-    ) * 1.15;
-
-  const secondaryDrift =
-    Math.sin(
-      t * Math.PI * 2.65 -
-        time * 0.24 +
-        0.6
-    ) * 0.38;
-
-  return (
-    upperRight +
-    centerLeft +
-    lowerRight +
-    structuralWave +
-    livingDrift +
-    secondaryDrift
-  );
-}
-
-/* ============================================================
-   DNA GENERATOR
-============================================================ */
-
-function buildDNAFrame(
-  time: number
-): DNALine[] {
-  const lines: DNALine[] = [];
-
-  for (
-    let row = 0;
-    row < ROWS;
-    row++
-  ) {
+  for (let row = 0; row < rows; row++) {
     const t =
-      row /
-      (ROWS - 1);
+      row / Math.max(rows - 1, 1);
 
-    /* --------------------------------------------------------
-       TWIST
-    -------------------------------------------------------- */
+    /* ----------------------------
+       Sculptural centerline
+    ---------------------------- */
 
-    const phaseImperfection =
+    const upperRight =
+      gaussian(t, 0.055, 0.22) *
+      columns *
+      0.043;
+
+    const centerLeft =
+      -gaussian(t, 0.47, 0.27) *
+      columns *
+      0.076;
+
+    const lowerRight =
+      gaussian(t, 0.9, 0.25) *
+      columns *
+      0.045;
+
+    const structural =
       Math.sin(
-        t * Math.PI * 3.1 +
-          time * 0.08
-      ) * 0.018 +
+        t *
+          Math.PI *
+          1.5 +
+          0.43
+      ) *
+      columns *
+      0.0055;
+
+    const centerBase =
+      columns / 2 +
+      upperRight +
+      centerLeft +
+      lowerRight +
+      structural;
+
+    /* ----------------------------
+       Twist variation
+    ---------------------------- */
+
+    const phaseVariation =
       Math.sin(
-        t * Math.PI * 7.7 -
-          time * 0.045
-      ) * 0.006;
+        t *
+          Math.PI *
+          2.2
+      ) *
+      0.022;
+
+    /* ----------------------------
+       Radius / body shape
+    ---------------------------- */
+
+    const centerVolume =
+      0.955 +
+      Math.sin(t * Math.PI) *
+        0.055;
+
+    const radiusTexture =
+      1 +
+      Math.sin(
+        t *
+          Math.PI *
+          4.1
+      ) *
+        0.008;
+
+    const radiusMultiplier =
+      columns *
+      HELIX_RADIUS *
+      centerVolume *
+      radiusTexture;
+
+    /* ----------------------------
+       Rungs
+    ---------------------------- */
+
+    const rungWave =
+      Math.sin(
+        t *
+          Math.PI *
+          19.2
+      );
+
+    const rungStrength =
+      smoothstep(
+        0.76,
+        1,
+        Math.abs(rungWave)
+      );
+
+    result.push({
+      t,
+      centerBase,
+      phaseVariation,
+      radiusMultiplier,
+      rungStrength,
+    });
+  }
+
+  return result;
+}
+
+/* ============================================================
+   FRAME GENERATOR
+============================================================ */
+
+function buildFrame(
+  rows: number,
+  columns: number,
+  time: number,
+  staticRows: StaticRowData[]
+): FrameRow[] {
+  const frame = new Array<FrameRow>(rows);
+
+  /*
+   * Reusable arrays.
+   *
+   * Avoids creating unnecessary temporary arrays for every
+   * glyph operation.
+   */
+
+  for (let row = 0; row < rows; row++) {
+    const staticRow = staticRows[row];
+
+    const t = staticRow.t;
+
+    const chars =
+      new Array<string>(columns).fill(" ");
+
+    const priority =
+      new Float32Array(columns);
+
+    /* ========================================================
+       CENTER DRIFT
+    ======================================================== */
+
+    const drift =
+      Math.sin(
+        t *
+          Math.PI *
+          1.65 +
+          time *
+            0.2
+      ) *
+      columns *
+      0.0017;
+
+    const center =
+      staticRow.centerBase +
+      drift;
+
+    /* ========================================================
+       ROTATION
+    ======================================================== */
 
     const angle =
       t *
         Math.PI *
         2 *
         TURNS +
-      time +
-      phaseImperfection;
+      time *
+        ROTATION_SPEED +
+      staticRow.phaseVariation;
 
-    const sin =
-      Math.sin(angle);
-
-    const cos =
-      Math.cos(angle);
-
-    const center =
-      WIDTH / 2;
-
-    /* --------------------------------------------------------
-       SILHOUETTE
-    -------------------------------------------------------- */
-
-    /*
-     * Fuller through the middle,
-     * cleaner toward ends.
-     */
-    const bodyVolume =
-      0.94 +
-      Math.sin(
-        t * Math.PI
-      ) * 0.06;
-
-    const radiusNoise =
-      Math.sin(
-        t * Math.PI * 3.35
-      ) * 0.0065;
-
-    const breathing =
-      Math.sin(
-        time * 0.31 +
-          t * Math.PI * 1.7
-      ) * 0.0018;
+    const sin = Math.sin(angle);
+    const cos = Math.cos(angle);
 
     const radius =
-      WIDTH *
-      (
-        0.258 +
-        radiusNoise +
-        breathing
-      ) *
-      bodyVolume;
-
-    const strandAX =
-      center +
-      sin * radius;
-
-    const strandBX =
-      center -
-      sin * radius;
-
-    const depthA =
-      cos;
-
-    const depthB =
-      -cos;
-
-    const chars =
-      Array(WIDTH).fill(" ");
+      staticRow.radiusMultiplier;
 
     /* ========================================================
-       STRAND
+       STRANDS
     ======================================================== */
 
-    function drawStrand(
+    const strandA =
+      center +
+      sin *
+        radius;
+
+    const strandB =
+      center -
+      sin *
+        radius;
+
+    const depthA = cos;
+    const depthB = -cos;
+
+    /* ========================================================
+       PIXEL / CHARACTER WRITER
+    ======================================================== */
+
+    function put(
       x: number,
-      depth: number,
-      strand:
-        | "A"
-        | "B"
+      character: string,
+      score: number
     ) {
-      const depth01 =
-        (depth + 1) /
-        2;
-
-      /*
-       * Foreground strands are subtly larger.
-       */
-      const perspectiveThickness =
-        smoothstep(
-          0,
-          1,
-          depth01
-        );
-
-      const thickness =
-        3 +
-        Math.round(
-          perspectiveThickness *
-            4
-        );
-
-      const core =
-        Math.round(x);
-
-      for (
-        let offset =
-          -thickness;
-        offset <=
-        thickness;
-        offset++
-      ) {
-        const px =
-          core + offset;
-
-        if (
-          px < 0 ||
-          px >= WIDTH
-        ) {
-          continue;
-        }
-
-        const normalized =
-          Math.abs(offset) /
-          Math.max(
-            thickness,
-            1
-          );
-
-        /*
-         * True circular cross-section approximation.
-         */
-        const roundProfile =
-          Math.sqrt(
-            Math.max(
-              0,
-              1 -
-                normalized *
-                  normalized
-            )
-          );
-
-        /* ----------------------------------------------------
-           BASE BODY
-        ---------------------------------------------------- */
-
-        const body =
-          0.09 +
-          depth01 * 0.62;
-
-        /* ----------------------------------------------------
-           BROAD GLASS / METAL REFLECTION
-        ---------------------------------------------------- */
-
-        const satin =
-          Math.pow(
-            roundProfile,
-            0.75
-          ) * 0.1;
-
-        /*
-         * Narrow central specular.
-         */
-        const gloss =
-          Math.pow(
-            roundProfile,
-            4.2
-          ) * 0.285;
-
-        /*
-         * Very sharp hot spot.
-         */
-        const hotSpecular =
-          Math.pow(
-            roundProfile,
-            9
-          ) *
-          (
-            0.055 +
-            depth01 *
-              0.05
-          );
-
-        /* ----------------------------------------------------
-           STUDIO DIRECTIONAL LIGHT
-        ---------------------------------------------------- */
-
-        const directional =
-          offset < 0
-            ? 0.115
-            : -0.05;
-
-        /* ----------------------------------------------------
-           MOVING REFLECTION
-        ---------------------------------------------------- */
-
-        const reflectionBand =
-          Math.sin(
-            t *
-              Math.PI *
-              3.75 -
-              time *
-                1.1 +
-              offset *
-                0.2
-          ) * 0.026;
-
-        /*
-         * Secondary slower reflection.
-         */
-        const secondaryBand =
-          Math.sin(
-            t *
-              Math.PI *
-              1.9 +
-              time *
-                0.48 -
-              offset *
-                0.1
-          ) * 0.012;
-
-        /* ----------------------------------------------------
-           MICRO MATERIAL DETAIL
-        ---------------------------------------------------- */
-
-        const microSurface =
-          Math.sin(
-            row * 1.31 +
-              offset *
-                0.79 +
-              time *
-                0.23
-          ) * 0.0075;
-
-        const strandBias =
-          strand === "A"
-            ? 0.008
-            : -0.004;
-
-        let light =
-          body +
-          satin +
-          gloss +
-          hotSpecular +
-          directional +
-          reflectionBand +
-          secondaryBand +
-          microSurface +
-          strandBias;
-
-        /* ----------------------------------------------------
-           EDGE FALLOFF
-        ---------------------------------------------------- */
-
-        const rimDarkening =
-          1 -
-          smoothstep(
-            0.58,
-            1,
-            normalized
-          ) *
-            0.77;
-
-        light *=
-          rimDarkening;
-
-        /*
-         * Deep polished rim.
-         */
-        if (
-          normalized >
-          0.93
-        ) {
-          light *= 0.48;
-        }
-
-        if (
-          normalized >
-          0.985
-        ) {
-          light *= 0.36;
-        }
-
-        chars[px] =
-          shadeCharacter(
-            light
-          );
-      }
-
-      /* ------------------------------------------------------
-         PRIMARY SPECULAR
-      ------------------------------------------------------ */
-
-      const highlightDirection =
-        depth > 0
-          ? -1
-          : 1;
-
-      const specular =
-        core +
-        highlightDirection;
+      const index = Math.round(x);
 
       if (
-        specular >= 0 &&
-        specular < WIDTH
+        index < 0 ||
+        index >= columns
       ) {
-        chars[specular] =
-          depth01 > 0.88
-            ? "@"
-            : depth01 >
-                0.72
-              ? "%"
-              : depth01 >
-                  0.52
-                ? "#"
-                : "*";
+        return;
       }
-
-      /* ------------------------------------------------------
-         SECONDARY SPECULAR
-      ------------------------------------------------------ */
-
-      const secondary =
-        core +
-        highlightDirection *
-          2;
 
       if (
-        secondary >= 0 &&
-        secondary < WIDTH
+        score <
+        priority[index]
       ) {
-        chars[secondary] =
-          depth01 > 0.72
-            ? "#"
-            : depth01 >
-                0.5
-              ? "+"
-              : "=";
+        return;
       }
 
-      /* ------------------------------------------------------
-         DARK OPPOSING EDGE
-      ------------------------------------------------------ */
-
-      const oppositeRim =
-        core -
-        highlightDirection *
-          thickness;
-
-      if (
-        oppositeRim >= 0 &&
-        oppositeRim <
-          WIDTH
-      ) {
-        chars[oppositeRim] =
-          depth01 > 0.58
-            ? ":"
-            : "·";
-      }
+      priority[index] = score;
+      chars[index] = character;
     }
 
     /* ========================================================
-       BRIDGES
+       BRIDGES / RUNGS
     ======================================================== */
 
     const left =
       Math.round(
         Math.min(
-          strandAX,
-          strandBX
+          strandA,
+          strandB
         )
       );
 
     const right =
       Math.round(
         Math.max(
-          strandAX,
-          strandBX
+          strandA,
+          strandB
         )
       );
 
-    /*
-     * Slightly irregular spacing prevents
-     * bridges looking machine-generated.
-     */
-    const rungPhase =
-      t *
-        Math.PI *
-        12.35 +
-      Math.sin(
-        t * Math.PI * 4
-      ) * 0.12;
-
-    const rungWave =
-      Math.sin(
-        rungPhase
+    const crossingStrength =
+      1 -
+      smoothstep(
+        0.055,
+        0.16,
+        Math.abs(sin)
       );
 
-    const drawBridge =
-      Math.abs(
-        rungWave
-      ) > 0.74 ||
-      Math.abs(sin) <
-        0.115;
+    const bridgeStrength =
+      Math.max(
+        staticRow.rungStrength,
+        crossingStrength
+      );
 
-    if (drawBridge) {
-      const bridgeDepth =
-        Math.max(
-          depthA,
-          depthB
-        );
-
-      const depth01 =
-        (
-          bridgeDepth + 1
-        ) / 2;
-
+    if (
+      bridgeStrength > 0.11 &&
+      right - left > 10
+    ) {
       const inset = 5;
 
       const start =
-        left + inset;
+        left +
+        inset;
 
       const end =
-        right - inset;
+        right -
+        inset;
 
       const length =
         Math.max(
-          end - start,
+          end -
+            start,
           1
         );
+
+      /*
+       * Draw every character for the rung.
+       *
+       * This is relatively cheap compared with the old
+       * blur/filter passes and keeps your DNA detailed.
+       */
 
       for (
         let x = start;
         x <= end;
         x++
       ) {
-        if (
-          x < 0 ||
-          x >= WIDTH
-        ) {
-          continue;
-        }
-
         const progress =
           (x - start) /
           length;
 
-        /*
-         * Rounded bridge body.
-         */
-        const centerProfile =
+        const profile =
           Math.sin(
             progress *
               Math.PI
           );
 
-        const bridgeGloss =
-          Math.pow(
-            centerProfile,
-            2.25
-          );
+        const centerBrightness =
+          profile *
+          profile;
 
-        /*
-         * Slight rim darkness.
-         */
-        const bridgeEdge =
-          Math.pow(
-            centerProfile,
-            0.55
-          );
-
-        const movingReflection =
-          Math.sin(
-            progress *
-              Math.PI *
-              2 -
-              time *
-                0.7 +
-              t *
-                Math.PI *
-                3
-          ) * 0.014;
-
-        const bridgeLight =
-          0.15 +
-          depth01 * 0.24 +
-          bridgeEdge * 0.07 +
-          bridgeGloss * 0.33 +
-          movingReflection;
-
-        let character =
-          "·";
+        let character = ":";
 
         if (
-          bridgeLight >
-          0.69
-        ) {
-          character = "=";
-        } else if (
-          bridgeLight >
-          0.52
+          centerBrightness >
+          0.18
         ) {
           character = "-";
-        } else if (
-          bridgeLight >
-          0.35
-        ) {
-          character = ":";
         }
 
-        /*
-         * Sparse technical segmentation.
-         */
         if (
-          x % 8 === 0 &&
-          bridgeLight >
-            0.48
+          centerBrightness >
+          0.42
+        ) {
+          character = "=";
+        }
+
+        if (
+          centerBrightness >
+          0.72
         ) {
           character = "+";
         }
 
-        chars[x] =
-          character;
+        /*
+         * Mechanical segmentation.
+         */
+        if (
+          (x - start) %
+            9 ===
+          0
+        ) {
+          character = "+";
+        }
+
+        /*
+         * Strong central bridge.
+         */
+        if (
+          Math.abs(
+            progress -
+              0.5
+          ) <
+          0.085
+        ) {
+          character = "=";
+        }
+
+        put(
+          x,
+          character,
+          0.25 +
+            bridgeStrength *
+              0.1
+        );
       }
 
       /*
-       * Premium rounded joints.
+       * Connection joints
        */
-      if (
-        start >= 0 &&
-        start < WIDTH
-      ) {
-        chars[start] =
-          depth01 > 0.78
-            ? "O"
-            : "o";
-      }
 
-      if (
-        end >= 0 &&
-        end < WIDTH
-      ) {
-        chars[end] =
-          depth01 > 0.78
-            ? "O"
-            : "o";
-      }
+      put(
+        start,
+        "O",
+        0.42
+      );
+
+      put(
+        start + 1,
+        "+",
+        0.4
+      );
+
+      put(
+        end - 1,
+        "+",
+        0.4
+      );
+
+      put(
+        end,
+        "O",
+        0.42
+      );
     }
 
     /* ========================================================
-       DEPTH ORDERING
+       STRAND DRAWER
+    ======================================================== */
+
+    function drawStrand(
+      position: number,
+      depth: number,
+      phaseBias: number
+    ) {
+      const depth01 =
+        (depth + 1) *
+        0.5;
+
+      const thickness =
+        BASE_THICKNESS +
+        Math.round(
+          depth01 *
+            FRONT_THICKNESS
+        );
+
+      const core =
+        Math.round(position);
+
+      /*
+       * Precompute common values once per strand.
+       */
+
+      const inverseThickness =
+        1 /
+        Math.max(
+          thickness,
+          1
+        );
+
+      const body =
+        0.2 +
+        depth01 *
+          0.43;
+
+      /* ======================================================
+         MATERIAL BODY
+      ====================================================== */
+
+      for (
+        let offset =
+          -thickness;
+        offset <= thickness;
+        offset++
+      ) {
+        const x =
+          core +
+          offset;
+
+        if (
+          x < 0 ||
+          x >= columns
+        ) {
+          continue;
+        }
+
+        const local =
+          offset *
+          inverseThickness;
+
+        const normalized =
+          Math.abs(local);
+
+        /*
+         * Faster circular approximation.
+         *
+         * Still gives the rails their rounded look.
+         */
+
+        const circle =
+          Math.sqrt(
+            Math.max(
+              0,
+              1 -
+                local *
+                  local
+            )
+          );
+
+        /* ----------------------------
+           Satin body
+        ---------------------------- */
+
+        const satin =
+          circle *
+          0.12;
+
+        /* ----------------------------
+           Central gloss
+        ---------------------------- */
+
+        const circleSquared =
+          circle *
+          circle;
+
+        const gloss =
+          circleSquared *
+          circleSquared *
+          0.18;
+
+        /* ----------------------------
+           Left-side highlight
+        ---------------------------- */
+
+        const highlightDistance =
+          (local + 0.24) /
+          0.22;
+
+        const highlight =
+          Math.exp(
+            -highlightDistance *
+              highlightDistance
+          ) *
+          (
+            0.105 +
+            depth01 *
+              0.055
+          );
+
+        /* ----------------------------
+           Small animated reflection
+        ---------------------------- */
+
+        const reflection =
+          Math.sin(
+            t *
+              10.36 -
+              time *
+                0.4 +
+              offset *
+                0.18 +
+              phaseBias
+          ) *
+          0.01;
+
+        const directional =
+          offset < 0
+            ? 0.06
+            : -0.012;
+
+        let brightness =
+          body +
+          satin +
+          gloss +
+          highlight +
+          directional +
+          reflection;
+
+        /*
+         * Edge falloff.
+         */
+
+        if (
+          normalized >
+          0.67
+        ) {
+          brightness *=
+            1 -
+            smoothstep(
+              0.67,
+              1,
+              normalized
+            ) *
+              0.5;
+        }
+
+        /*
+         * Keep outer border intact.
+         */
+
+        if (
+          normalized >
+          0.92
+        ) {
+          brightness =
+            Math.max(
+              brightness,
+              0.19 +
+                depth01 *
+                  0.12
+            );
+        }
+
+        const score =
+          0.52 +
+          depth01 *
+            0.44;
+
+        put(
+          x,
+          glyph(
+            brightness
+          ),
+          score
+        );
+      }
+
+      /* ======================================================
+         STRONG SOLID CORE
+      ====================================================== */
+
+      const highlightDirection =
+        depth > 0
+          ? -1
+          : 1;
+
+      const centerGlyph =
+        depth01 > 0.82
+          ? "@"
+          : depth01 > 0.64
+          ? "%"
+          : depth01 > 0.42
+          ? "#"
+          : "*";
+
+      put(
+        core,
+        centerGlyph,
+        0.94 +
+          depth01 *
+            0.05
+      );
+
+      put(
+        core +
+          highlightDirection,
+        depth01 > 0.72
+          ? "@"
+          : "%",
+        0.95
+      );
+
+      put(
+        core +
+          highlightDirection *
+            2,
+        depth01 > 0.62
+          ? "%"
+          : "#",
+        0.91
+      );
+
+      put(
+        core +
+          highlightDirection *
+            3,
+        depth01 > 0.52
+          ? "#"
+          : "*",
+        0.86
+      );
+
+      /*
+       * Dark opposing rim.
+       */
+
+      put(
+        core -
+          highlightDirection *
+            thickness,
+        depth01 > 0.55
+          ? ":"
+          : "·",
+        0.87
+      );
+    }
+
+    /* ========================================================
+       TRUE DEPTH ORDER
     ======================================================== */
 
     if (
@@ -771,571 +764,524 @@ function buildDNAFrame(
       depthB
     ) {
       drawStrand(
-        strandAX,
+        strandA,
         depthA,
-        "A"
+        0
       );
 
       drawStrand(
-        strandBX,
+        strandB,
         depthB,
-        "B"
+        Math.PI
       );
     } else {
       drawStrand(
-        strandBX,
+        strandB,
         depthB,
-        "B"
+        Math.PI
       );
 
       drawStrand(
-        strandAX,
+        strandA,
         depthA,
-        "A"
+        0
       );
     }
 
-    const frontDepth =
-      (
-        Math.max(
-          depthA,
-          depthB
-        ) + 1
-      ) / 2;
-
-    /*
-     * Specularity becomes strongest when
-     * a strand is facing toward us.
-     */
-    const specularity =
-      smoothstep(
-        0.5,
-        1,
-        frontDepth
-      );
-
-    lines.push({
-      text:
-        chars.join(""),
+    frame[row] = {
+      text: chars.join(""),
 
       depth:
-        frontDepth,
-
-      specularity,
-
-      /*
-       * Rare accent streak.
-       */
-      accent:
-        row % 31 === 0 &&
-        frontDepth >
-          0.86,
-    });
+        (
+          Math.max(
+            depthA,
+            depthB
+          ) +
+          1
+        ) *
+        0.5,
+    };
   }
 
-  return lines;
+  return frame;
 }
 
 /* ============================================================
-   SHARED TYPOGRAPHY
-============================================================ */
-
-const BASE_TEXT_STYLE: CSSProperties = {
-  fontFamily:
-    ASCII_FONT,
-
-  fontVariantLigatures:
-    "none",
-
-  fontKerning:
-    "none",
-
-  textRendering:
-    "geometricPrecision",
-
-  WebkitFontSmoothing:
-    "antialiased",
-};
-
-/* ============================================================
-   DNA LAYERS
-============================================================ */
-
-type LayerType =
-  | "ambient"
-  | "contact"
-  | "reflection"
-  | "main";
-
-type LayerProps = {
-  lines: DNALine[];
-  time: number;
-  type: LayerType;
-};
-
-const DNALayer =
-  memo(
-    function DNALayer({
-      lines,
-      time,
-      type,
-    }: LayerProps) {
-      const isMain =
-        type === "main";
-
-      const isReflection =
-        type ===
-        "reflection";
-
-      let transform = `
-        rotateZ(-1.5deg)
-        scaleX(1.18)
-        scaleY(1.29)
-      `;
-
-      if (
-        type ===
-        "ambient"
-      ) {
-        transform = `
-          translate3d(
-            22px,
-            27px,
-            0
-          )
-          rotateZ(-1.5deg)
-          scaleX(1.18)
-          scaleY(1.29)
-        `;
-      }
-
-      if (
-        type ===
-        "contact"
-      ) {
-        transform = `
-          translate3d(
-            7px,
-            9px,
-            0
-          )
-          rotateZ(-1.5deg)
-          scaleX(1.18)
-          scaleY(1.29)
-        `;
-      }
-
-      if (
-        type ===
-        "reflection"
-      ) {
-        transform = `
-          translate3d(
-            -1.3px,
-            -1.2px,
-            0
-          )
-          rotateZ(-1.5deg)
-          scaleX(1.18)
-          scaleY(1.29)
-        `;
-      }
-
-      if (isMain) {
-        transform = `
-          perspective(
-            1600px
-          )
-          rotateZ(-1.5deg)
-          scaleX(1.18)
-          scaleY(1.29)
-        `;
-      }
-
-      const className =
-        type ===
-        "ambient"
-          ? `
-              absolute
-              text-black/[0.022]
-              blur-[4.5px]
-            `
-          : type ===
-              "contact"
-            ? `
-                absolute
-                text-black/[0.07]
-                blur-[0.65px]
-              `
-            : type ===
-                "reflection"
-              ? `
-                  absolute
-                  text-white
-                `
-              : `
-                  relative
-                  z-10
-                `;
-
-      return (
-        <pre
-          className={`
-            ${className}
-
-            m-0
-            select-none
-            whitespace-pre
-            font-semibold
-            text-[clamp(12px,0.9vw,17px)]
-            leading-[0.775]
-            tracking-[-0.105em]
-          `}
-          style={{
-            ...BASE_TEXT_STYLE,
-
-            transform,
-
-            transformOrigin:
-              "center",
-
-            backfaceVisibility:
-              "hidden",
-
-            contain:
-              "layout paint",
-
-            willChange:
-              isMain
-                ? "transform"
-                : undefined,
-          }}
-        >
-          {lines.map(
-            (
-              line,
-              index
-            ) => {
-              const t =
-                index /
-                Math.max(
-                  lines.length -
-                    1,
-                  1
-                );
-
-              const curve =
-                getCurveOffset(
-                  t,
-                  time
-                );
-
-              /*
-               * Shadow layers only need silhouette.
-               */
-              if (
-                type ===
-                  "ambient" ||
-                type ===
-                  "contact"
-              ) {
-                return (
-                  <span
-                    key={index}
-                    className="block"
-                    style={{
-                      transform: `
-                        translate3d(
-                          ${curve}px,
-                          0,
-                          0
-                        )
-                      `,
-                    }}
-                  >
-                    {
-                      line.text
-                    }
-                  </span>
-                );
-              }
-
-              /*
-               * Reflection layer:
-               * visible primarily on brightest,
-               * closest sections.
-               */
-              if (
-                isReflection
-              ) {
-                const reflectionOpacity =
-                  line.specularity *
-                  0.105;
-
-                return (
-                  <span
-                    key={index}
-                    className="block"
-                    style={{
-                      transform: `
-                        translate3d(
-                          ${curve}px,
-                          0,
-                          0
-                        )
-                      `,
-
-                      opacity:
-                        reflectionOpacity,
-
-                      filter:
-                        "blur(0.25px)",
-                    }}
-                  >
-                    {
-                      line.text
-                    }
-                  </span>
-                );
-              }
-
-              /* =================================================
-                 MAIN LAYER
-              ================================================= */
-
-              const microSway =
-                Math.sin(
-                  t *
-                    Math.PI *
-                    2.1 +
-                    time *
-                      0.63
-                ) * 0.34;
-
-              /*
-               * Tiny perspective change.
-               */
-              const horizontalScale =
-                0.955 +
-                line.depth *
-                  0.07;
-
-              /*
-               * True front/back tonal separation.
-               */
-              const opacity =
-                0.37 +
-                line.depth *
-                  0.63;
-
-              const brightness =
-                0.59 +
-                line.depth *
-                  0.5;
-
-              const contrast =
-                0.99 +
-                line.depth *
-                  0.37;
-
-              /*
-               * Rear portions soften just slightly.
-               */
-              const rearBlur =
-                line.depth <
-                0.13
-                  ? 0.22
-                  : line.depth <
-                      0.22
-                    ? 0.08
-                    : 0;
-
-              const shadowStrength =
-                line.depth >
-                0.82
-                  ? `
-                      -1px -1px 0 rgba(255,255,255,1),
-                      -2px -1px 1px rgba(255,255,255,0.23),
-
-                      1px 1px 1px rgba(0,0,0,0.17),
-                      2px 2px 3px rgba(0,0,0,0.045),
-                      4px 4px 8px rgba(0,0,0,0.018)
-                    `
-                  : line.depth >
-                      0.52
-                    ? `
-                        -1px 0 0 rgba(255,255,255,0.42),
-
-                        1px 1px 1px rgba(0,0,0,0.08),
-                        2px 2px 3px rgba(0,0,0,0.02)
-                      `
-                    : `
-                        1px 1px 1px rgba(0,0,0,0.028)
-                      `;
-
-              return (
-                <span
-                  key={index}
-                  className="block"
-                  style={{
-                    transform: `
-                      translate3d(
-                        ${
-                          curve +
-                          microSway
-                        }px,
-                        0,
-                        0
-                      )
-
-                      scaleX(
-                        ${horizontalScale}
-                      )
-                    `,
-
-                    opacity,
-
-                    color:
-                      line.accent
-                        ? "#2864ff"
-                        : "#090909",
-
-                    filter: `
-                      brightness(
-                        ${brightness}
-                      )
-
-                      contrast(
-                        ${contrast}
-                      )
-
-                      blur(
-                        ${rearBlur}px
-                      )
-                    `,
-
-                    textShadow:
-                      shadowStrength,
-                  }}
-                >
-                  {
-                    line.text
-                  }
-                </span>
-              );
-            }
-          )}
-        </pre>
-      );
-    }
-  );
-
-/* ============================================================
-   PORTRAIT FIELD
+   COMPONENT
 ============================================================ */
 
 export default function PortraitField() {
-  const [time, setTime] =
-    useState(0);
+  const containerRef =
+    useRef<HTMLDivElement>(null);
 
-  const frameRef =
-    useRef<number | null>(
-      null
-    );
-
-  const startTimeRef =
-    useRef<number | null>(
-      null
-    );
-
-  const previousRenderRef =
-    useRef(0);
+  const canvasRef =
+    useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    /*
-     * ~60 fps ceiling.
-     *
-     * Prevents unnecessary React updates
-     * if the browser runs rAF above 60 Hz.
-     */
-    const FRAME_INTERVAL =
-      1000 / 60;
+    const container =
+      containerRef.current;
 
-    const animate = (
-      now: number
-    ) => {
-      if (
-        startTimeRef.current ===
-        null
-      ) {
-        startTimeRef.current =
-          now;
-      }
+    const canvas =
+      canvasRef.current;
 
-      const sinceRender =
-        now -
-        previousRenderRef.current;
+    if (
+      !container ||
+      !canvas
+    ) {
+      return;
+    }
 
-      if (
-        sinceRender >=
-        FRAME_INTERVAL
-      ) {
-        previousRenderRef.current =
-          now -
-          (
-            sinceRender %
-            FRAME_INTERVAL
-          );
-
-        const elapsed =
-          (
-            now -
-            startTimeRef.current
-          ) / 1000;
-
-        /*
-         * Primary twist speed.
-         *
-         * Slow enough to feel expensive,
-         * fast enough to visibly move.
-         */
-        setTime(
-          elapsed *
-            0.072
-        );
-      }
-
-      frameRef.current =
-        requestAnimationFrame(
-          animate
-        );
-    };
-
-    frameRef.current =
-      requestAnimationFrame(
-        animate
+    const context =
+      canvas.getContext(
+        "2d",
+        {
+          alpha: true,
+          desynchronized: true,
+        }
       );
 
-    return () => {
+    if (!context) {
+      return;
+    }
+
+    let rafId = 0;
+
+    let destroyed = false;
+    let visible = true;
+
+    let lastFrameTime = 0;
+
+    let width = 1;
+    let height = 1;
+
+    let fontSize = 12;
+
+    let charWidth = 7;
+    let lineHeight = 9;
+
+    let columns = 80;
+    let rows = 100;
+
+    let startX = 0;
+    let startY = 0;
+
+    let staticRows:
+      StaticRowData[] = [];
+
+    const startTime =
+      performance.now();
+
+    /* ========================================================
+       RESIZE
+    ======================================================== */
+
+    function resize() {
+      const bounds =
+        container.getBoundingClientRect();
+
+      width =
+        Math.max(
+          bounds.width,
+          1
+        );
+
+      height =
+        Math.max(
+          bounds.height,
+          1
+        );
+
+      /*
+       * BIG PERFORMANCE DIFFERENCE.
+       *
+       * 2x Retina means FOUR TIMES as many pixels.
+       *
+       * 1.25x is still plenty for an ASCII sculpture.
+       */
+
+      const dpr =
+        Math.min(
+          window.devicePixelRatio ||
+            1,
+          1.25
+        );
+
+      canvas.width =
+        Math.round(
+          width *
+            dpr
+        );
+
+      canvas.height =
+        Math.round(
+          height *
+            dpr
+        );
+
+      canvas.style.width =
+        `${width}px`;
+
+      canvas.style.height =
+        `${height}px`;
+
+      context.setTransform(
+        dpr,
+        0,
+        0,
+        dpr,
+        0,
+        0
+      );
+
+      fontSize =
+        clamp(
+          width / 55,
+          9.75,
+          14
+        );
+
+      context.font =
+        `600 ${fontSize}px ${FONT}`;
+
+      charWidth =
+        Math.max(
+          context.measureText(
+            "@"
+          ).width,
+          1
+        );
+
+      lineHeight =
+        fontSize *
+        0.78;
+
+      /*
+       * Original could become roughly 104 × 132.
+       *
+       * This still looks high resolution while doing
+       * substantially less CPU work.
+       */
+
+      columns =
+        Math.round(
+          clamp(
+            width /
+              charWidth,
+            66,
+            90
+          )
+        );
+
+      rows =
+        Math.round(
+          clamp(
+            height /
+              lineHeight,
+            76,
+            108
+          )
+        );
+
+      const contentWidth =
+        columns *
+        charWidth;
+
+      const contentHeight =
+        rows *
+        lineHeight;
+
+      startX =
+        (
+          width -
+          contentWidth
+        ) /
+        2;
+
+      startY =
+        (
+          height -
+          contentHeight
+        ) /
+        2;
+
+      /*
+       * Rebuild only when dimensions change.
+       */
+
+      staticRows =
+        buildStaticRows(
+          rows,
+          columns
+        );
+    }
+
+    resize();
+
+    /* ========================================================
+       RESIZE OBSERVER
+    ======================================================== */
+
+    const resizeObserver =
+      new ResizeObserver(() => {
+        resize();
+      });
+
+    resizeObserver.observe(
+      container
+    );
+
+    /* ========================================================
+       ONLY ANIMATE WHEN VISIBLE
+    ======================================================== */
+
+    const intersectionObserver =
+      new IntersectionObserver(
+        ([entry]) => {
+          visible =
+            entry.isIntersecting;
+        },
+        {
+          threshold: 0.01,
+        }
+      );
+
+    intersectionObserver.observe(
+      container
+    );
+
+    /* ========================================================
+       REDUCED MOTION
+    ======================================================== */
+
+    const reducedMotion =
+      window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      );
+
+    /* ========================================================
+       DRAW
+    ======================================================== */
+
+    function render(now: number) {
+      if (destroyed) {
+        return;
+      }
+
+      rafId =
+        requestAnimationFrame(
+          render
+        );
+
+      /*
+       * Don't do DNA calculations while it isn't even visible.
+       */
+
       if (
-        frameRef.current !==
-        null
+        !visible ||
+        document.hidden
       ) {
-        cancelAnimationFrame(
-          frameRef.current
+        return;
+      }
+
+      /*
+       * 30 FPS cap.
+       */
+
+      const delta =
+        now -
+        lastFrameTime;
+
+      if (
+        delta <
+        FRAME_TIME
+      ) {
+        return;
+      }
+
+      /*
+       * Prevent timer drift.
+       */
+
+      lastFrameTime =
+        now -
+        (
+          delta %
+          FRAME_TIME
+        );
+
+      const elapsed =
+        reducedMotion.matches
+          ? 0
+          : (
+              now -
+              startTime
+            ) /
+            1000;
+
+      const frame =
+        buildFrame(
+          rows,
+          columns,
+          elapsed,
+          staticRows
+        );
+
+      context.clearRect(
+        0,
+        0,
+        width,
+        height
+      );
+
+      context.font =
+        `600 ${fontSize}px ${FONT}`;
+
+      context.textAlign =
+        "left";
+
+      context.textBaseline =
+        "top";
+
+      /* ======================================================
+         MAIN DNA + DEPTH SHADOW
+
+         IMPORTANT:
+
+         The old implementation drew entire frames multiple
+         times and used context.filter = blur().
+
+         That is expensive.
+
+         Canvas shadow properties give us similar dimensional
+         separation in ONE primary pass.
+      ====================================================== */
+
+      context.save();
+
+      context.fillStyle =
+        "#070707";
+
+      context.shadowColor =
+        "rgba(0, 0, 0, 0.20)";
+
+      context.shadowBlur =
+        2;
+
+      context.shadowOffsetX =
+        2.5;
+
+      context.shadowOffsetY =
+        3;
+
+      for (
+        let row = 0;
+        row < frame.length;
+        row++
+      ) {
+        context.globalAlpha =
+          0.68 +
+          frame[row].depth *
+            0.32;
+
+        context.fillText(
+          frame[row].text,
+          startX,
+          startY +
+            row *
+              lineHeight
         );
       }
+
+      context.restore();
+
+      /* ======================================================
+         SPECULAR HIGHLIGHT
+
+         Only every second row.
+
+         Visually blends into a continuous highlight, but is
+         roughly half the text drawing cost of another full pass.
+      ====================================================== */
+
+      context.save();
+
+      context.fillStyle =
+        "rgba(255,255,255,0.72)";
+
+      context.globalAlpha =
+        0.26;
+
+      context.shadowColor =
+        "transparent";
+
+      context.shadowBlur =
+        0;
+
+      for (
+        let row = 0;
+        row < frame.length;
+        row += 2
+      ) {
+        context.fillText(
+          frame[row].text,
+          startX - 0.55,
+          startY +
+            row *
+              lineHeight -
+            0.45
+        );
+      }
+
+      context.restore();
+    }
+
+    /* ========================================================
+       FONT + START
+    ======================================================== */
+
+    async function start() {
+      try {
+        await document.fonts.load(
+          '600 12px "IBM Plex Mono"'
+        );
+
+        await document.fonts.ready;
+      } catch {
+        /*
+         * Browser/system monospace fallback is fine.
+         */
+      }
+
+      if (destroyed) {
+        return;
+      }
+
+      resize();
+
+      rafId =
+        requestAnimationFrame(
+          render
+        );
+    }
+
+    void start();
+
+    /* ========================================================
+       CLEANUP
+    ======================================================== */
+
+    return () => {
+      destroyed = true;
+
+      cancelAnimationFrame(
+        rafId
+      );
+
+      resizeObserver.disconnect();
+
+      intersectionObserver.disconnect();
     };
   }, []);
-
-  const lines =
-    useMemo(
-      () =>
-        buildDNAFrame(
-          time
-        ),
-      [time]
-    );
 
   return (
     <div
@@ -1345,47 +1291,26 @@ export default function PortraitField() {
         pointer-events-none
         absolute
         hidden
-        lg:block
         overflow-visible
+        lg:block
       "
     >
       <div
+        ref={containerRef}
         className="
-          relative
-          flex
-          h-full
-          w-full
-          items-center
-          justify-center
+          absolute
+          inset-0
           overflow-visible
         "
       >
-        {/* LARGE AMBIENT DEPTH */}
-        <DNALayer
-          lines={lines}
-          time={time}
-          type="ambient"
-        />
-
-        {/* TIGHT CONTACT SHADOW */}
-        <DNALayer
-          lines={lines}
-          time={time}
-          type="contact"
-        />
-
-        {/* SUBTLE GLASS REFLECTION */}
-        <DNALayer
-          lines={lines}
-          time={time}
-          type="reflection"
-        />
-
-        {/* MAIN SCULPTURE */}
-        <DNALayer
-          lines={lines}
-          time={time}
-          type="main"
+        <canvas
+          ref={canvasRef}
+          className="
+            absolute
+            inset-0
+            h-full
+            w-full
+          "
         />
       </div>
     </div>

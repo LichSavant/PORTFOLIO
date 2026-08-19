@@ -4,44 +4,66 @@ import Navigation from "./Navigation";
 import HeroCopy from "./HeroCopy";
 import PortraitField from "./PortraitField";
 import SystemHUD from "./SystemHUD";
+import StructureFocus from "./StructureFocus";
 
 /* ============================================================
-   STATIC HERO GRAPH DATA
-
-   Defined once instead of regenerating the circle coordinates
-   every time Landing renders.
+   STATIC GRAPH DATA
 ============================================================ */
 
 const GRAPH_POINTS = Array.from(
-  { length: 36 },
+  { length: 42 },
   (_, index) => ({
-    cx: index * 22,
+    cx: index * 19,
     cy:
-      145 -
-      Math.sin(index * 0.63) * 22,
+      143 -
+      Math.sin(index * 0.57) * 18 -
+      Math.sin(index * 0.19) * 8,
   })
 );
 
+const TELEMETRY_BARS = [
+  7,
+  12,
+  5,
+  18,
+  8,
+  26,
+  10,
+  14,
+  7,
+  22,
+  32,
+  11,
+  17,
+  8,
+  38,
+  15,
+  9,
+  29,
+  13,
+  21,
+  7,
+  35,
+  16,
+  10,
+  25,
+  8,
+];
+
 /* ============================================================
    BOTTOM TRANSITION
-
-   No top blur anymore.
-
-   This is intentionally lighter than the previous 7px blur.
-   It only softens the very bottom edge of the DNA/graph so the
-   hero still transitions naturally into the next section.
 ============================================================ */
 
 const BOTTOM_BLUR_STYLE: CSSProperties = {
-  backdropFilter: "blur(5px)",
-  WebkitBackdropFilter: "blur(5px)",
+  backdropFilter: "blur(4px)",
+  WebkitBackdropFilter: "blur(4px)",
 
   WebkitMaskImage: `
     linear-gradient(
       to top,
       black 0%,
-      rgba(0, 0, 0, 0.82) 24%,
-      rgba(0, 0, 0, 0.38) 58%,
+      rgba(0, 0, 0, 0.7) 24%,
+      rgba(0, 0, 0, 0.24) 56%,
       transparent 100%
     )
   `,
@@ -50,12 +72,133 @@ const BOTTOM_BLUR_STYLE: CSSProperties = {
     linear-gradient(
       to top,
       black 0%,
-      rgba(0, 0, 0, 0.82) 24%,
-      rgba(0, 0, 0, 0.38) 58%,
+      rgba(0, 0, 0, 0.7) 24%,
+      rgba(0, 0, 0, 0.24) 56%,
       transparent 100%
     )
   `,
 };
+
+/* ============================================================
+   CROSSHAIR
+============================================================ */
+
+function Crosshair({
+  className = "",
+}: {
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`
+        hero-crosshair
+        pointer-events-none
+        absolute
+        h-3
+        w-3
+        ${className}
+      `}
+    >
+      <span
+        className="
+          absolute
+          left-1/2
+          top-0
+          h-full
+          w-px
+          -translate-x-1/2
+          bg-current
+        "
+      />
+
+      <span
+        className="
+          absolute
+          left-0
+          top-1/2
+          h-px
+          w-full
+          -translate-y-1/2
+          bg-current
+        "
+      />
+    </span>
+  );
+}
+
+/* ============================================================
+   RIGHT TELEMETRY RAIL
+============================================================ */
+
+function RightTelemetryRail() {
+  const points = [8, 26, 50, 73, 92];
+
+  return (
+    <div
+      aria-hidden="true"
+      className="
+        pointer-events-none
+        absolute
+        right-[3.2%]
+        top-[29%]
+        z-30
+        hidden
+        h-[34%]
+        w-6
+        xl:block
+      "
+    >
+      <div
+        className="
+          absolute
+          bottom-0
+          left-1/2
+          top-0
+          w-px
+          -translate-x-1/2
+          bg-[var(--line)]
+        "
+      />
+
+      {points.map((top, index) => {
+        const isActive = index === 2;
+
+        return (
+          <span
+            key={top}
+            className={`
+              absolute
+              left-1/2
+              -translate-x-1/2
+              rounded-full
+
+              ${
+                isActive
+                  ? `
+                    h-2.5
+                    w-2.5
+                    border
+                    border-[rgba(40,100,255,0.22)]
+                    bg-[var(--accent)]
+                    shadow-[0_0_0_5px_rgba(40,100,255,0.08)]
+                  `
+                  : `
+                    h-1.5
+                    w-1.5
+                    bg-[rgba(8,8,8,0.28)]
+                  `
+              }
+            `}
+            style={{
+              top: `${top}%`,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 /* ============================================================
    LANDING
@@ -74,10 +217,7 @@ export default function Landing() {
         text-[var(--foreground)]
       "
     >
-      {/* =====================================================
-          BACKGROUND GRID
-      ====================================================== */}
-
+      {/* BACKGROUND GRID */}
       <div
         aria-hidden="true"
         className="
@@ -89,8 +229,20 @@ export default function Landing() {
         "
       />
 
+      {/* SUBTLE CENTRAL LIGHT */}
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none
+          absolute
+          inset-0
+          z-0
+          bg-[radial-gradient(circle_at_58%_45%,rgba(255,255,255,0.62),transparent_37%)]
+        "
+      />
+
       {/* =====================================================
-          MAIN HERO
+          HERO
       ====================================================== */}
 
       <div
@@ -102,18 +254,7 @@ export default function Landing() {
           flex-col
         "
       >
-        {/* ===================================================
-            NAVIGATION
-
-            Navigation already controls its own stacking.
-            No additional positioning wrapper needed.
-        ==================================================== */}
-
         <Navigation />
-
-        {/* ===================================================
-            HERO STAGE
-        ==================================================== */}
 
         <div
           className="
@@ -123,16 +264,7 @@ export default function Landing() {
             flex-1
           "
         >
-          {/* =================================================
-              ASCII DNA
-
-              Dedicated layer below text/HUD.
-
-              We intentionally do NOT add top masking or blur.
-              The sculpture can remain sharp all the way through
-              the upper viewport.
-          ================================================== */}
-
+          {/* ASCII DNA */}
           <div
             aria-hidden="true"
             className="
@@ -146,12 +278,7 @@ export default function Landing() {
             <PortraitField />
           </div>
 
-          {/* =================================================
-              BOTTOM TRANSITION ONLY
-
-              Kept below hero content but above DNA.
-          ================================================== */}
-
+          {/* BOTTOM SOFT TRANSITION */}
           <div
             aria-hidden="true"
             className="
@@ -160,32 +287,65 @@ export default function Landing() {
               inset-x-[-6vw]
               bottom-0
               z-[15]
-              h-[10vh]
+              h-[8vh]
             "
             style={BOTTOM_BLUR_STYLE}
           />
 
-          {/* =================================================
-              HERO COPY
-
-              HeroCopy already owns its grid-column layout and
-              z-index, so no display:contents wrapper is needed.
-          ================================================== */}
-
+          {/* HERO COPY */}
           <HeroCopy />
 
-          {/* =================================================
-              SYSTEM HUD
-          ================================================== */}
-
+          {/* SYSTEM HUD */}
           <SystemHUD />
 
           {/* =================================================
-              TECHNICAL GRAPH
+              TRUE FOCUS STRUCTURE DATA
+          ================================================== */}
 
-              Lower than the DNA/content so it reads as a subtle
-              environmental detail rather than another foreground
-              element.
+          <StructureFocus />
+
+          {/* =================================================
+              VERY SPARSE TECH MARKERS
+          ================================================== */}
+
+          <Crosshair
+            className="
+              left-[45%]
+              top-[18%]
+              text-[var(--accent)]
+              opacity-55
+            "
+          />
+
+          <Crosshair
+            className="
+              left-[72%]
+              top-[52%]
+              text-[var(--accent)]
+              opacity-35
+            "
+          />
+
+          <span
+            aria-hidden="true"
+            className="
+              hero-floating-dot
+              pointer-events-none
+              absolute
+              left-[46.5%]
+              top-[69%]
+              z-[22]
+              hidden
+              h-1
+              w-1
+              rounded-full
+              bg-[var(--accent)]
+              xl:block
+            "
+          />
+
+          {/* =================================================
+              BOTTOM TELEMETRY GRAPH
           ================================================== */}
 
           <svg
@@ -195,54 +355,52 @@ export default function Landing() {
               hero-graph
               z-[5]
             "
-            viewBox="0 0 760 170"
+            viewBox="0 0 900 180"
             preserveAspectRatio="none"
           >
-            {/* CURVES */}
-
+            {/* WAVES */}
             <g
               fill="none"
               stroke="currentColor"
-              strokeWidth="0.75"
+              strokeWidth="0.7"
               vectorEffect="non-scaling-stroke"
             >
               <path
                 d="
-                  M0 146
-                  C90 112 150 150 230 121
-                  S360 94 430 126
-                  565 116 620 58
-                  704 72 760 16
+                  M0 150
+                  C95 115 150 154 226 131
+                  S355 103 432 133
+                  565 124 635 71
+                  745 84 900 42
                 "
               />
 
               <path
-                opacity=".55"
+                opacity=".5"
                 d="
-                  M0 153
-                  C95 139 154 109 228 138
-                  S358 128 430 105
-                  560 145 628 88
-                  704 105 760 52
+                  M0 158
+                  C112 142 176 117 250 143
+                  S388 133 458 112
+                  595 150 664 95
+                  760 112 900 66
                 "
               />
 
               <path
-                opacity=".3"
+                opacity=".23"
                 d="
-                  M0 160
-                  C120 126 176 161 258 145
-                  S390 108 470 143
-                  600 126 760 85
+                  M0 166
+                  C125 135 196 169 280 151
+                  S410 117 500 151
+                  650 136 900 96
                 "
               />
             </g>
 
-            {/* GRAPH POINTS */}
-
+            {/* DATA DOTS */}
             <g
               fill="currentColor"
-              opacity=".55"
+              opacity=".32"
             >
               {GRAPH_POINTS.map(
                 ({ cx, cy }, index) => (
@@ -250,14 +408,63 @@ export default function Landing() {
                     key={index}
                     cx={cx}
                     cy={cy}
-                    r="1"
+                    r="0.9"
                   />
                 )
+              )}
+            </g>
+
+            {/* TELEMETRY LINES */}
+            <g
+              stroke="var(--accent)"
+              strokeWidth="0.75"
+              opacity=".48"
+            >
+              {TELEMETRY_BARS.map(
+                (height, index) => {
+                  const x =
+                    475 + index * 15;
+
+                  return (
+                    <line
+                      key={index}
+                      x1={x}
+                      x2={x}
+                      y1={166}
+                      y2={166 - height}
+                    />
+                  );
+                }
+              )}
+            </g>
+
+            {/* TELEMETRY NODES */}
+            <g
+              fill="var(--accent)"
+              opacity=".72"
+            >
+              {TELEMETRY_BARS.map(
+                (height, index) => {
+                  const x =
+                    475 + index * 15;
+
+                  return (
+                    <circle
+                      key={index}
+                      cx={x}
+                      cy={166 - height}
+                      r="1.15"
+                    />
+                  );
+                }
               )}
             </g>
           </svg>
         </div>
       </div>
+
+      {/* RIGHT SIDE DATUM RAIL */}
+      <RightTelemetryRail />
 
       {/* =====================================================
           LEFT SCROLL INDICATOR
@@ -268,35 +475,31 @@ export default function Landing() {
         className="
           pointer-events-none
           absolute
-          top-[22%]
           bottom-[8%]
           left-3
+          top-[22%]
           z-40
           hidden
           w-8
           xl:block
         "
       >
-        {/* VERTICAL RULE */}
-
         <div
           className="
             absolute
-            top-0
             left-1/2
+            top-0
             h-[65%]
             w-px
             bg-[var(--line)]
           "
         />
 
-        {/* SECTION NUMBER */}
-
         <span
           className="
             absolute
-            top-[34%]
             left-0
+            top-[34%]
             font-mono
             text-[9px]
             tracking-[0.14em]
@@ -306,21 +509,17 @@ export default function Landing() {
           001
         </span>
 
-        {/* BLUE MARKER */}
-
         <span
           className="
             absolute
-            top-[34.5%]
             left-[17px]
+            top-[34.5%]
             h-1.5
             w-1.5
             rounded-full
             bg-[var(--accent)]
           "
         />
-
-        {/* SCROLL LABEL */}
 
         <div
           className="
@@ -342,7 +541,8 @@ export default function Landing() {
               text-[var(--muted)]
             "
             style={{
-              writingMode: "vertical-rl",
+              writingMode:
+                "vertical-rl",
             }}
           >
             Scroll
@@ -361,7 +561,7 @@ export default function Landing() {
       </div>
 
       {/* =====================================================
-          BOTTOM PORTFOLIO LABEL
+          BOTTOM LABEL
       ====================================================== */}
 
       <div
@@ -370,9 +570,9 @@ export default function Landing() {
           page-frame
           pointer-events-none
           absolute
-          right-0
           bottom-5
           left-0
+          right-0
           z-40
           hidden
           font-mono
