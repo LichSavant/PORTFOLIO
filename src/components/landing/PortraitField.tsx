@@ -818,21 +818,21 @@ export default function PortraitField() {
     useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const container =
+    const containerNode =
       containerRef.current;
 
-    const canvas =
+    const canvasNode =
       canvasRef.current;
 
     if (
-      !container ||
-      !canvas
+      !containerNode ||
+      !canvasNode
     ) {
       return;
     }
 
-    const context =
-      canvas.getContext(
+    const contextNode =
+      canvasNode.getContext(
         "2d",
         {
           alpha: true,
@@ -840,9 +840,21 @@ export default function PortraitField() {
         }
       );
 
-    if (!context) {
+    if (!contextNode) {
       return;
     }
+
+    // Stable non-null aliases are captured by the nested resize/render
+    // functions. TypeScript cannot safely retain narrowing from mutable refs
+    // across those asynchronous closure boundaries.
+    const container: HTMLDivElement =
+      containerNode;
+
+    const canvas: HTMLCanvasElement =
+      canvasNode;
+
+    const context: CanvasRenderingContext2D =
+      contextNode;
 
     let rafId = 0;
 
