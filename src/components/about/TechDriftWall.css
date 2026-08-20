@@ -1,0 +1,298 @@
+.tech-drift-wall {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  overflow: hidden;
+
+  pointer-events: none;
+
+  perspective: var(
+    --tdw-perspective,
+    1300px
+  );
+
+  perspective-origin:
+    58% 48%;
+
+  --tdw-tile-w: 150px;
+  --tdw-tile-h: 96px;
+  --tdw-gap: 22px;
+
+  /*
+   * Fade the wall toward the outer
+   * edges so it feels integrated into
+   * the page instead of pasted on top.
+   */
+  -webkit-mask-image:
+    radial-gradient(
+      ellipse 76% 88%
+        at 66% 50%,
+      #000 25%,
+      rgba(
+          0,
+          0,
+          0,
+          0.88
+        )
+        47%,
+      rgba(
+          0,
+          0,
+          0,
+          0.35
+        )
+        72%,
+      transparent 100%
+    );
+
+  mask-image:
+    radial-gradient(
+      ellipse 76% 88%
+        at 66% 50%,
+      #000 25%,
+      rgba(
+          0,
+          0,
+          0,
+          0.88
+        )
+        47%,
+      rgba(
+          0,
+          0,
+          0,
+          0.35
+        )
+        72%,
+      transparent 100%
+    );
+
+  opacity: 0.52;
+}
+
+.tech-drift-wall__plane {
+  position: absolute;
+
+  top: 50%;
+  left: 67%;
+
+  display: flex;
+  flex-direction: row;
+
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+
+  will-change: transform;
+}
+
+.tech-drift-wall__column {
+  position: relative;
+
+  width: calc(
+    var(--tdw-tile-w) +
+      var(--tdw-gap)
+  );
+
+  transform-style:
+    preserve-3d;
+}
+
+.tech-drift-wall__track {
+  display: flex;
+  flex-direction: column;
+
+  will-change: transform;
+
+  transform-style:
+    preserve-3d;
+}
+
+.tech-drift-wall__tile {
+  position: relative;
+
+  width: 100%;
+
+  height: calc(
+    var(--tdw-tile-h) +
+      var(--tdw-gap)
+  );
+
+  flex: 0 0 auto;
+
+  transform-style:
+    preserve-3d;
+}
+
+.tech-drift-wall__inner {
+  position: absolute;
+
+  inset:
+    calc(
+      var(--tdw-gap) /
+        2
+    );
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    rgba(
+      8,
+      8,
+      8,
+      0.08
+    );
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.76
+    );
+
+  /*
+   * Square-ish technical cards,
+   * not ReactBits photo cards.
+   */
+  border-radius: 4px;
+
+  transform:
+    translateZ(0);
+
+  backface-visibility:
+    hidden;
+}
+
+.tech-drift-wall__inner img {
+  display: block;
+
+  width: 52%;
+  height: 52%;
+
+  object-fit: contain;
+
+  user-select: none;
+
+  opacity: 0.78;
+
+  filter:
+    grayscale(0.15)
+    saturate(0.88);
+
+  -webkit-user-drag:
+    none;
+}
+
+.tech-drift-wall__veil {
+  position: absolute;
+
+  inset: 0;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(
+        255,
+        255,
+        255,
+        0.05
+      ),
+      rgba(
+        47,
+        111,
+        255,
+        0.055
+      )
+    );
+
+  pointer-events: none;
+}
+
+/* ============================================================
+   EXTRA BLEND INTO WHITE ABOUT PAGE
+============================================================ */
+
+.tech-drift-wall::before {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  z-index: 10;
+
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      90deg,
+      var(--background)
+        0%,
+      rgba(
+          255,
+          255,
+          255,
+          0.95
+        )
+        18%,
+      rgba(
+          255,
+          255,
+          255,
+          0.55
+        )
+        38%,
+      rgba(
+          255,
+          255,
+          255,
+          0.1
+        )
+        64%,
+      rgba(
+          255,
+          255,
+          255,
+          0
+        )
+        100%
+    );
+}
+
+@media (
+  max-width: 1024px
+) {
+  .tech-drift-wall {
+    opacity: 0.32;
+  }
+
+  .tech-drift-wall__plane {
+    left: 72%;
+  }
+}
+
+@media (
+  max-width: 767px
+) {
+  .tech-drift-wall {
+    opacity: 0.2;
+  }
+}
+
+@media (
+  prefers-reduced-motion:
+    reduce
+) {
+  .tech-drift-wall__plane,
+  .tech-drift-wall__track {
+    will-change: auto;
+  }
+}
