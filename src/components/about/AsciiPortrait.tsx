@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-const PHOTO_PATH = "/about/dhanwil-reference.jpg";
+const PHOTO_PATH = "/about/dhanwil-reference.png";
 
 const SOURCE_WIDTH = 420;
 const SAMPLE_STEP = 5;
@@ -368,25 +368,29 @@ export default function AsciiPortrait() {
     useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    const container =
+    const containerNode =
       containerRef.current;
 
-    const canvas =
+    const canvasNode =
       canvasRef.current;
 
-    if (!container || !canvas) {
+    if (!containerNode || !canvasNode) {
       return;
     }
 
-    const context =
-      canvas.getContext("2d", {
+    const contextNode =
+      canvasNode.getContext("2d", {
         alpha: true,
         desynchronized: true,
       });
 
-    if (!context) {
+    if (!contextNode) {
       return;
     }
+
+    const container: HTMLDivElement = containerNode;
+    const canvas: HTMLCanvasElement = canvasNode;
+    const context: CanvasRenderingContext2D = contextNode;
 
     let destroyed = false;
     let visible = true;
@@ -427,21 +431,11 @@ export default function AsciiPortrait() {
       points =
         buildPortraitPoints(image);
 
-      console.log(
-        "[AsciiPortrait] image loaded:",
-        image.width,
-        image.height
-      );
-
-      console.log(
-        "[AsciiPortrait] point count:",
-        points.length
-      );
     };
 
     image.onerror = () => {
       console.error(
-        "[AsciiPortrait] Failed to load:",
+        "[AsciiPortrait] Failed to load reference image:",
         PHOTO_PATH
       );
     };
